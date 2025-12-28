@@ -2,9 +2,9 @@
 
 > 🚀 **A containerized End-to-End ELT, Vectorization, and Retrieval Pipeline connecting Raw Data with GenAI Orchestration.**
 
-[![Pipeline-X Demo](https://img.youtube.com/vi/placeholder_id/maxresdefault.jpg)](https://youtu.be/placeholder_id)
+[![Pipeline-X Demo](https://img.youtube.com/vi/S7Es1ZTmpKw/maxresdefault.jpg)](https://youtu.be/S7Es1ZTmpKw)
 
-> 📺 **[Watch the full end-to-end demo](https://youtu.be/placeholder_id)** featuring the dual-stream ingestion and RAG retrieval.
+> 📺 **[Watch the full end-to-end demo](https://youtu.be/S7Es1ZTmpKw)** featuring the dual-stream ingestion and RAG retrieval.
 
 <br />
 
