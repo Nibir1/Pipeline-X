@@ -12,12 +12,13 @@ Description:
 
 import os
 import pandas as pd
+import io
 from sqlalchemy import create_engine, text
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from dotenv import load_dotenv
 
-# Load environment variables (useful if running locally outside Docker)
+# Load environment variables
 load_dotenv()
 
 class DatabaseConnector:
@@ -31,11 +32,10 @@ class DatabaseConnector:
         # ---------------------------------------------------------
         self.pg_user = os.getenv("POSTGRES_USER", "airflow")
         self.pg_pass = os.getenv("POSTGRES_PASSWORD", "airflow")
-        self.pg_host = os.getenv("POSTGRES_HOST", "postgres") # 'postgres' is the docker service name
+        self.pg_host = os.getenv("POSTGRES_HOST", "postgres")
         self.pg_port = os.getenv("POSTGRES_PORT", "5432")
         self.pg_db = os.getenv("POSTGRES_DB", "airflow")
         
-        # Connection String: postgresql+psycopg2://user:pass@host:port/db
         self.pg_url = f"postgresql+psycopg2://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_db}"
         self.pg_engine = create_engine(self.pg_url)
 
@@ -46,9 +46,8 @@ class DatabaseConnector:
         self.qdrant_port = int(os.getenv("QDRANT_PORT", 6333))
         self.qdrant_client = QdrantClient(host=self.qdrant_host, port=self.qdrant_port)
         
-        # Vector Config
         self.collection_name = "pipeline_x_docs"
-        self.vector_size = 384 # Matches all-MiniLM-L6-v2 dimensions
+        self.vector_size = 384 
 
     def init_db_schema(self):
         """
@@ -56,8 +55,7 @@ class DatabaseConnector:
         """
         print("[DB CONNECTOR] Initializing database schemas...")
 
-        # 1. Postgres: Create Analytics Table if not exists
-        # We use a raw SQL execution for table creation to ensure constraints
+        # 1. Postgres: Create Analytics Table
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS analytics_metadata (
             id VARCHAR(50) PRIMARY KEY,
@@ -68,11 +66,13 @@ class DatabaseConnector:
             ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """
-        with self.pg_engine.connect() as conn:
+        
+        # FIX: Use engine.begin() which auto-commits on exit.
+        with self.pg_engine.begin() as conn:
             conn.execute(text(create_table_sql))
             print("[DB CONNECTOR] Postgres table 'analytics_metadata' checked/created.")
 
-        # 2. Qdrant: Create Collection if not exists
+        # 2. Qdrant: Create Collection
         try:
             self.qdrant_client.get_collection(self.collection_name)
             print(f"[DB CONNECTOR] Qdrant collection '{self.collection_name}' exists.")
@@ -88,40 +88,67 @@ class DatabaseConnector:
 
     def save_metadata_to_postgres(self, df: pd.DataFrame):
         """
-        Saves the Pandas DataFrame to Postgres.
-        Uses 'append' mode but relies on the table's Primary Key to reject duplicates 
-        (or we can handle it via an upsert in a more advanced version).
-        
-        For this simplified pipeline, we use 'to_sql' with error handling.
+        Saves the Pandas DataFrame to Postgres using the Manual COPY pattern.
+        This bypasses pandas.to_sql entirely to avoid version conflicts.
         """
         if df.empty:
             print("[DB CONNECTOR] No metadata to save.")
             return
 
         print(f"[DB CONNECTOR] Saving {len(df)} rows to Postgres...")
+        staging_table = 'staging_analytics_metadata'
         
-        # We write to a temp table first, then upsert to main table to handle duplicates gracefully
-        # This is a common pattern to ensure Idempotency in SQL ELT
-        with self.pg_engine.begin() as conn:
-            # 1. Create Temp Table
-            df.to_sql('temp_metadata', conn, if_exists='replace', index=False)
+        # Get raw connection to use COPY
+        raw_conn = self.pg_engine.raw_connection()
+        
+        try:
+            with raw_conn.cursor() as cur:
+                # 1. Create Staging Table Manually
+                cur.execute(f"""
+                    CREATE TABLE IF NOT EXISTS {staging_table} (
+                        id VARCHAR(50),
+                        title TEXT,
+                        author VARCHAR(100),
+                        created_at TIMESTAMP,
+                        category VARCHAR(50)
+                    )
+                """)
+                cur.execute(f"TRUNCATE TABLE {staging_table}") # Ensure it's empty
+                
+                # 2. Convert DataFrame to CSV in memory
+                output = io.StringIO()
+                # Ensure column order matches table definition exactly
+                df[['id', 'title', 'author', 'created_at', 'category']].to_csv(output, sep='\t', header=False, index=False)
+                output.seek(0)
+                
+                # 3. Use COPY expert to load data (Fastest method)
+                cur.copy_expert(f"COPY {staging_table} FROM STDIN", output)
+                print("[DB CONNECTOR] Staging table loaded via COPY.")
+
+                # 4. Upsert from Staging to Production
+                upsert_sql = f"""
+                INSERT INTO analytics_metadata (id, title, author, created_at, category)
+                SELECT id, title, author, created_at, category 
+                FROM {staging_table}
+                ON CONFLICT (id) DO UPDATE 
+                SET title = EXCLUDED.title,
+                    author = EXCLUDED.author,
+                    category = EXCLUDED.category;
+                """
+                cur.execute(upsert_sql)
+                
+                # 5. Cleanup
+                cur.execute(f"DROP TABLE IF EXISTS {staging_table}")
             
-            # 2. Upsert (Insert ... ON CONFLICT DO NOTHING)
-            # Note: This syntax is Postgres specific
-            upsert_sql = """
-            INSERT INTO analytics_metadata (id, title, author, created_at, category)
-            SELECT id, title, author, created_at, category FROM temp_metadata
-            ON CONFLICT (id) DO UPDATE 
-            SET title = EXCLUDED.title,
-                author = EXCLUDED.author,
-                category = EXCLUDED.category;
-            """
-            conn.execute(text(upsert_sql))
+            raw_conn.commit()
+            print("[DB CONNECTOR] Metadata saved successfully (Upsert complete).")
             
-            # 3. Clean up
-            conn.execute(text("DROP TABLE temp_metadata"))
-            
-        print("[DB CONNECTOR] Metadata saved successfully (Upsert complete).")
+        except Exception as e:
+            raw_conn.rollback()
+            print(f"[DB CONNECTOR] Error saving metadata: {e}")
+            raise e
+        finally:
+            raw_conn.close()
 
     def save_vectors_to_qdrant(self, chunks: list):
         """
@@ -134,36 +161,20 @@ class DatabaseConnector:
         print(f"[DB CONNECTOR] Upserting {len(chunks)} vectors to Qdrant...")
         
         points = []
+        import uuid
+        
         for chunk in chunks:
-            # Construct a PointStruct for each chunk
-            # Point ID: We need a unique ID for the point. 
-            # We can use UUIDs or a hash of the doc_id + chunk_index.
-            # Using uuid provided by the chunker or generating one.
-            import uuid
+            # Generate a deterministic ID based on doc_id and chunk_index
+            point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{chunk['doc_id']}_{chunk['chunk_index']}"))
             
             points.append(models.PointStruct(
-                id=str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{chunk['doc_id']}_{chunk['chunk_index']}")),
+                id=point_id,
                 vector=chunk['vector'],
-                payload=chunk['metadata']  # Store metadata for retrieval filtering
+                payload=chunk['metadata']
             ))
 
-        # Upsert is idempotent by default in Qdrant based on Point ID
         self.qdrant_client.upsert(
             collection_name=self.collection_name,
             points=points
         )
         print("[DB CONNECTOR] Vectors upserted successfully.")
-
-# Quick test block
-if __name__ == "__main__":
-    # Note: This test assumes you are running 'docker-compose up' so the ports are exposed locally
-    # If running from inside the container, this works automatically.
-    # If running from your host machine, ensure 5432 and 6333 are mapped.
-    
-    try:
-        connector = DatabaseConnector()
-        connector.init_db_schema()
-        print("Connection verification successful.")
-    except Exception as e:
-        print(f"Connection failed: {e}")
-        print("Ensure Docker containers are running.")
