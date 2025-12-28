@@ -21,12 +21,19 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        # Install only logic dependencies (skip Airflow for unit testing logic)
-        pip install pandas langchain sentence-transformers qdrant-client pydantic python-dotenv pytest
+        # CRITICAL FIX: Pin versions to match requirements.txt to avoid breaking changes in latest LangChain
+        pip install pandas==2.2.0 \
+                    langchain==0.1.16 \
+                    langchain-community==0.0.33 \
+                    sentence-transformers==2.7.0 \
+                    qdrant-client==1.9.0 \
+                    pydantic==2.7.0 \
+                    python-dotenv==1.0.1 \
+                    pytest \
+                    flake8
         
     - name: Lint with flake8
       run: |
-        pip install flake8
         # Stop the build if there are Python syntax errors or undefined names
         flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
         
