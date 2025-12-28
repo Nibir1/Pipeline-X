@@ -1,0 +1,20 @@
+# AIRFLOW CORE & PROVIDERS
+apache-airflow==2.9.0
+apache-airflow-providers-postgres
+apache-airflow-providers-http
+
+# DATA ENGINEERING
+pandas==2.2.0
+psycopg2-binary==2.9.9
+sqlalchemy==1.4.52
+
+# AI & VECTORIZATION
+langchain==0.1.16
+langchain-community==0.0.33
+sentence-transformers==2.7.0
+qdrant-client==1.9.0
+openai==1.23.2
+
+# UTILITIES
+pydantic==2.7.0
+python-dotenv==1.0.1
