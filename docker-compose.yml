@@ -1,7 +1,5 @@
 # Docker Compose file for Pipeline X
 
-version: "3.9"
-
 x-airflow-common:
   &airflow-common
   build: .
@@ -140,6 +138,27 @@ services:
     depends_on:
       api:
         condition: service_healthy
+  
+  # ---------------------------------------------------------
+  # 6. BIG DATA ENGINE (Spark)
+  # ---------------------------------------------------------
+  spark-master:
+    image: apache/spark:3.5.1
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.master.Master
+    ports:
+    - "8081:8080"
+    - "7077:7077"
+
+  spark-worker:
+    image: apache/spark:3.5.1
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.worker.Worker
+      spark://spark-master:7077
+    depends_on:
+      - spark-master
 
 volumes:
   postgres-db-volume:
