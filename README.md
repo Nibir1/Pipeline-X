@@ -1,73 +1,71 @@
 # Pipeline-X | Applied AI Data Platform
 
-> 🚀 **A containerized End-to-End ELT, Vectorization, and Retrieval Pipeline connecting Raw Data with GenAI Orchestration.**
+> 🚀 **A Hybrid Cloud, Big Data-Ready ELT & RAG Pipeline connecting Raw Data with GenAI Orchestration.**
 
 [![Pipeline-X Demo](https://img.youtube.com/vi/S7Es1ZTmpKw/maxresdefault.jpg)](https://youtu.be/S7Es1ZTmpKw)
 
-> 📺 **[Watch the full end-to-end demo](https://youtu.be/S7Es1ZTmpKw)** featuring the dual-stream ingestion and RAG retrieval.
+> 📺 **[Watch the full end-to-end demo](https://youtu.be/S7Es1ZTmpKw)** featuring dual-stream ingestion and RAG retrieval.
 
 <br />
 
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Spark](https://img.shields.io/badge/Apache%20Spark-3.5-E25A1C?style=for-the-badge&logo=apachespark&logoColor=white)
+![Azure](https://img.shields.io/badge/Azure-Cloud-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
 ![Airflow](https://img.shields.io/badge/Apache%20Airflow-2.9-017CEE?style=for-the-badge&logo=apacheairflow&logoColor=white)
 ![Postgres](https://img.shields.io/badge/Postgres-15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Qdrant](https://img.shields.io/badge/Vector_DB-Qdrant-b91d47?style=for-the-badge&logo=qdrant&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.32-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-**Pipeline-X** is a reference architecture for building "Data Foundations for AI". It demonstrates the complete lifecycle of a modern data platform: orchestrating the cleaning of data for SQL Analytics while simultaneously generating vector embeddings for AI Retrieval Augmented Generation (RAG).
+**Pipeline-X** is a reference architecture for building "Data Foundations for AI". It demonstrates the complete lifecycle of a modern data platform: orchestrating distributed data processing (Spark), managing hybrid cloud infrastructure (Terraform/Azure), and generating vector embeddings for AI Retrieval Augmented Generation (RAG).
 
 ### Why this exists
-Building reliable data pipelines for AI is complex. Pipeline-X solves common engineering pitfalls by demonstrating a robust, unified architecture:
+Building reliable data pipelines for AI is complex. Pipeline-X solves common engineering pitfalls by demonstrating a robust, unified architecture that scales from "Local Dev" to "Enterprise Cloud":
 
-1.  **Dual-Stream Processing:** Orchestrates a single workflow that splits data into structured metadata (for SQL Warehousing) and unstructured chunks (for Vector Search), keeping Analytics and AI in sync.
-2.  **Robust Ingestion Protocol:** Implements low-level **Postgres COPY** protocols to bypass common ORM bottlenecks and dependency conflicts (Pandas/SQLAlchemy), ensuring high-performance data loading.
-3.  **Decoupled Service Layer:** Unlike simple scripts, this exposes data via a **FastAPI** microservice, allowing frontend applications (Streamlit) to consume RAG capabilities without direct database access.
+1.  **Hybrid Cloud Architecture:** Deploys storage resources to **Microsoft Azure** using **Terraform (IaC)**, connecting local microservices to managed cloud databases.
+2.  **Big Data Ready:** Features a dual-mode transformation layer. It uses **Pandas** for speed on small data and includes an integrated **Apache Spark Cluster** for distributed processing of massive datasets.
+3.  **Dual-Stream Processing:** Orchestrates a workflow that splits data into structured metadata (for SQL Warehousing) and unstructured chunks (for Vector Search), keeping Analytics and AI in sync.
+4.  **Decoupled Service Layer:** Exposes data via a **FastAPI** microservice, allowing frontend applications (Streamlit) to consume RAG capabilities without direct database access.
 
 ---
 
 ## System Architecture
 
-The application is built on a containerized microservices architecture managed by Docker Compose:
+The application is built on a containerized microservices architecture managed by Docker Compose, connected to Azure Cloud:
 
-1.  **Orchestrator (Apache Airflow):** The "Manager." It schedules the DAGs that fetch raw data, transform it using Pandas, and trigger vectorization tasks.
-2.  **Storage Layer (Hybrid):**
-    * **PostgreSQL:** Stores structured metadata (Author, Date, Category) for traditional analytics.
-    * **Qdrant:** Stores high-dimensional vector embeddings for semantic search.
-3.  **Service Layer (FastAPI):** A lightweight REST API that handles embedding generation and vector similarity search.
-4.  **User Interface (Streamlit):** An interactive "Corporate Search" dashboard that allows users to query the knowledge base in natural language.
-
-## Key Features
-
--   **Idempotent Pipelines:** The Airflow DAG uses "Upsert" logic, allowing the pipeline to run multiple times without creating duplicate records or vectors.
--   **Local AI Inference:** Uses `sentence-transformers/all-MiniLM-L6-v2` running locally on CPU, eliminating external API costs for embedding generation.
--   **Semantic Search:** Enables context-aware retrieval. Searching for "Financial performance" retrieves documents categorized as "Financial Reports" even if the keywords don't match exactly.
--   **Automated Quality Checks:** Includes CI/CD workflows for linting and logic verification, ensuring code quality before deployment.
+1.  **Orchestrator (Apache Airflow):** The "Manager." It schedules DAGs, monitors dependencies, and triggers Spark jobs.
+2.  **Compute Engine:**
+    * **Local Executor:** Runs lightweight Python/Pandas tasks.
+    * **Apache Spark Cluster:** A Master/Worker setup for distributed ETL and Parquet file generation.
+3.  **Storage Layer (Hybrid):**
+    * **Azure Database for PostgreSQL:** Managed Cloud Database storing structured metadata (Author, Date, Category).
+    * **Qdrant (Local):** Stores high-dimensional vector embeddings for semantic search.
+4.  **Service Layer (FastAPI):** A lightweight REST API that handles embedding generation and vector similarity search.
+5.  **User Interface (Streamlit):** An interactive "Corporate Search" dashboard for natural language querying.
 
 ---
 
 ## Tech Stack
 
-### Orchestration & Compute
--   **Manager:** Apache Airflow 2.9 (Dockerized)
--   **Language:** Python 3.10
--   **Transformation:** Pandas 2.2
+### Infrastructure & Cloud
+-   **Cloud Provider:** Microsoft Azure (Sweden Central Region)
+-   **IaC:** Terraform
+-   **Database:** Azure Database for PostgreSQL (Flexible Server)
 
-### Storage & AI
--   **Warehouse:** PostgreSQL 15
--   **Vector DB:** Qdrant (Rust-based engine)
+### Orchestration & Big Data
+-   **Manager:** Apache Airflow 2.9
+-   **Distributed Compute:** Apache Spark 3.5.1 (PySpark)
+-   **Local Transform:** Pandas 2.2
+
+### AI & Storage
+-   **Vector DB:** Qdrant
 -   **AI Framework:** LangChain (Chunking), Sentence-Transformers (Embeddings)
 
 ### Interface & API
 -   **Backend:** FastAPI, Uvicorn
 -   **Frontend:** Streamlit
--   **Networking:** HTTPX, Pydantic
-
-### DevOps
--   **Containerization:** Docker, Docker Compose
--   **Automation:** Makefiles for sequential build orchestration & environment cleanup.
 
 ---
 
@@ -76,7 +74,8 @@ The application is built on a containerized microservices architecture managed b
 ### Prerequisites
 
 -   Docker Desktop installed
--   Make (Optional, but recommended for automation)
+-   Make (Optional, but recommended)
+-   **Optional:** Azure CLI & Terraform (Only required if deploying infrastructure)
 
 ### Installation
 
@@ -86,83 +85,85 @@ The application is built on a containerized microservices architecture managed b
     cd Pipeline-X
     ```
 
-2.  **Set Environment Variables**
-    Create a `.env` file in the root directory (defaults are provided in the repo):
+2.  **Infrastructure Setup (Optional - Hybrid Mode)**
+    If you want to use Azure Cloud Storage, use the provided Terraform scripts:
+    ```bash
+    cd infra
+    terraform init
+    terraform apply
+    # Copy the 'db_host' output to your .env file
+    ```
+
+3.  **Set Environment Variables**
+    Create a `.env` file in the root directory. Update `POSTGRES_HOST` if using Azure, or keep it `postgres` for local testing.
     ```bash
     AIRFLOW_UID=50000
-    POSTGRES_USER=airflow
-    POSTGRES_PASSWORD=airflow
+    POSTGRES_HOST=pipeline-x-db-xxxx.postgres.database.azure.com  # Or 'postgres' for local
+    POSTGRES_USER=airflow_admin
+    POSTGRES_PASSWORD=SecurePassword123!
+    POSTGRES_DB=airflow
     QDRANT_HOST=qdrant
     API_URL=http://localhost:8000/docs
     ```
 
-3.  **Build and Run**
+4.  **Build and Run**
     ```bash
     make build
     ```
 
-The `make` command handles the sequential build process to avoid race conditions. Once complete:
+The `make` command handles the sequential build process. Once complete:
 -   **Frontend UI:** [http://localhost:8501](http://localhost:8501)
--   **Airflow UI:** [http://localhost:8080](http://localhost:8080) (User: `admin` / Pass: `admin`)
--   **API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+-   **Airflow UI:** [http://localhost:8080](http://localhost:8080)
+-   **Spark Master UI:** [http://localhost:8081](http://localhost:8081)
 
 ### Testing & Validation
 
-The project includes specific verification scripts to prove the "Applied AI" capabilities.
+The project includes specific verification scripts for AI and Big Data.
 
-To verify the semantic search logic without the UI:
-1.  Enter the scheduler container:
-    ```bash
-    make shell
-    ```
-2.  Run the verification script:
-    ```bash
-    python scripts/test_retrieval.py
-    ```
+**1. Verify Semantic Search (RAG)**
+```bash
+make shell
+python scripts/test_retrieval.py
+```
 
-*This will validate that a query for "Technical Specs" correctly retrieves documents with the "Technical" category.*
-
-### How It Works
-
-**The Ingestion Pipeline (Airflow DAG)**
-1.  **Extract:** Generates mock JSON business reports (Financial, Technical).
-2.  **Transform:** Pandas cleans timestamps and standardizes author names.
-3.  **Load (SQL):** Metadata is pushed to Postgres using the high-speed `COPY` protocol.
-4.  **Vectorize (AI):** Text is split into 500-token chunks and embedded using `MiniLM`.
-5.  **Index:** Vectors + Payload are upserted into Qdrant.
-
-**The Retrieval Flow (RAG)**
-1.  **User Query:** "How is the Q4 revenue?" entered in Streamlit.
-2.  **API Call:** Frontend sends request to FastAPI.
-3.  **Embedding:** FastAPI embeds the query using the same model as ingestion.
-4.  **Search:** Qdrant finds the nearest neighbors via Cosine Similarity.
-5.  **Display:** Results and context are returned to the user.
+**2. Verify Spark Cluster (Big Data) Run the PySpark transformer to process raw data into Parquet format:**
+```bash
+make shell
+# Generate mock data first
+python gen_data.py
+# Submit job to Spark Cluster
+python src/etl/spark_transformer.py
+```
 
 ## Project Structure
 
 ```text
 pipeline-x/
-├── docker-compose.yml       # Orchestration (Airflow, DBs, API, UI)
-├── Makefile                 # Build automation scripts
-├── dags/                    # Airflow DAGs
+├── docker-compose.yml        # Orchestration (Airflow, Spark, API, UI)
+├── Makefile                  # Build automation scripts
+├── infra/                    # Terraform Infrastructure as Code (Azure)
+│   ├── main.tf               # Cloud Resource Definitions
+│   └── .gitignore            # Excludes Terraform state/binaries
+├── dags/                     # Airflow DAGs
 │   ├── ingestion_pipeline.py # Main ELT + AI workflow
-│   └── utils/               # Robust DB Connectors
-├── src/                     # Core Logic
-│   ├── etl/                 # Extractors & Transformers
-│   ├── ai/                  # Chunking & Embedding logic
-│   ├── api/                 # FastAPI Backend
-│   └── ui/                  # Streamlit Frontend
-├── requirements.txt         # Python Dependencies
-└── Dockerfile               # Custom Airflow Image
+│   └── utils/                # DB Connectors
+├── src/                      # Core Logic
+│   ├── etl/                  # Extractors & Transformers
+│   │   ├── extractor.py      # Data Generator
+│   │   └── spark_transformer.py # PySpark Logic
+│   ├── ai/                   # Chunking & Embedding logic
+│   ├── api/                  # FastAPI Backend
+│   └── ui/                   # Streamlit Frontend
+├── requirements.txt          # Python Dependencies
+└── Dockerfile                # Custom Airflow Image (includes OpenJDK)
 ```
 
 ## Roadmap
-- [x] Core Physics Engine (60Hz Loop)
-- [x] AI Voice Control & JSON Parsing
-- [x] Weather Simulation (Physics + Visuals)
-- [x] Automated Captain's Logs
-- [ ] Digital Twin Replay System
-- [ ] Fleet Management (Multi-Vessel Support)
+- [x] Core Pipeline: End-to-End ELT with Airflow
+- [x] RAG Integration: Vector Search with Qdrant & LangChain
+- [x] Hybrid Cloud: Azure Database deployment via Terraform
+- [x] Big Data Engine: Apache Spark Integration
+- [ ] Kubernetes: Helm Chart deployment
 
 ---
 
