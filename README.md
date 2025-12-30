@@ -2,9 +2,9 @@
 
 > 🚀 **A Hybrid Cloud, Big Data-Ready ELT & RAG Pipeline connecting Raw Data with GenAI Orchestration.**
 
-[![Pipeline-X Demo](https://img.youtube.com/vi/S7Es1ZTmpKw/maxresdefault.jpg)](https://youtu.be/S7Es1ZTmpKw)
+[![Pipeline-X Demo](https://img.youtube.com/vi/1yQl7gMAKNU/maxresdefault.jpg)](https://youtu.be/1yQl7gMAKNU)
 
-> 📺 **[Watch the full end-to-end demo](https://youtu.be/S7Es1ZTmpKw)** featuring dual-stream ingestion and RAG retrieval.
+> 📺 **[Watch the full end-to-end demo](https://youtu.be/1yQl7gMAKNU)** featuring dual-stream ingestion and RAG retrieval.
 
 <br />
 
