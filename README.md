@@ -1,14 +1,15 @@
-# Pipeline-X | Applied AI Data Platform
+# Pipeline-X: Applied AI Data Platform
 
 > 🚀 **A Hybrid Cloud, Big Data-Ready ELT & RAG Pipeline connecting Raw Data with GenAI Orchestration.**
 
 [![Pipeline-X Demo](https://img.youtube.com/vi/1yQl7gMAKNU/maxresdefault.jpg)](https://youtu.be/1yQl7gMAKNU)
 
-> 📺 **[Watch the full end-to-end demo](https://youtu.be/1yQl7gMAKNU)** featuring dual-stream ingestion and RAG retrieval.
-
-<br />
+> 📺 **[Watch the Platform Demo](https://youtu.be/1yQl7gMAKNU)** featuring Apache Spark distributed processing, Airflow orchestration, and Azure Hybrid Cloud deployment.
 
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge)
+![Cloud](https://img.shields.io/badge/Cloud-Azure%20Hybrid-0078D4?style=for-the-badge)
+![Data](https://img.shields.io/badge/Big%20Data-Apache%20Spark-E25A1C?style=for-the-badge)
+![IaC](https://img.shields.io/badge/Infra-Terraform-7B42BC?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Spark](https://img.shields.io/badge/Apache%20Spark-3.5-E25A1C?style=for-the-badge&logo=apachespark&logoColor=white)
 ![Azure](https://img.shields.io/badge/Azure-Cloud-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)
@@ -20,6 +21,112 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
 **Pipeline-X** is a reference architecture for building "Data Foundations for AI". It demonstrates the complete lifecycle of a modern data platform: orchestrating distributed data processing (Spark), managing hybrid cloud infrastructure (Terraform/Azure), and generating vector embeddings for AI Retrieval Augmented Generation (RAG).
+
+---
+
+## 1. Executive Summary & Business Value
+
+Most AI projects fail because the underlying data infrastructure is brittle. Pipeline-X addresses the "Data Foundation" gap.
+
+| KPI | The Problem | Pipeline-X Solution |
+| :--- | :--- | :--- |
+| **Data Gravity** | Training data is stuck in silos (CSVs, SQL, APIs). | **Unified ELT:** Airflow orchestrates the ingestion from all sources into a central Data Lake. |
+| **Scalability** | Pandas scripts crash on datasets >10GB. | **Distributed Compute:** Automatically hands off heavy transformations to an **Apache Spark Cluster** (Master/Worker architecture). |
+| **Search Quality** | Standard keyword search misses context. | **Semantic Search:** A parallel pipeline chunks and embeds text into **Qdrant**, enabling "Meaning-based" retrieval for RAG apps. |
+
+---
+
+## 2. System Architecture (C4 Model)
+
+We utilize a Hybrid Cloud architecture: Sensitive compute runs in containers (or on-prem), while durable storage lives in managed Azure Cloud services.
+
+### Level 1: System Context
+The Data Lifecycle: Ingest $\rightarrow$ Process $\rightarrow$ Serve.
+
+```mermaid
+graph LR
+    Source[Raw Data Sources] -- "Ingest" --> Airflow[Airflow Orchestrator]
+    
+    subgraph "Processing Layer (Docker)"
+        Airflow -- "Trigger Job" --> Spark[Spark Cluster]
+        Spark -- "Write Parquet" --> Lake[Data Lake]
+        Airflow -- "Embed Chunks" --> Embed[Embedding Service]
+    end
+    
+    subgraph "Storage Layer (Azure + Hybrid)"
+        Lake -- "Load Metadata" --> SQL[(Azure PostgreSQL)]
+        Embed -- "Upsert Vectors" --> Vec[(Qdrant Vector DB)]
+    end
+    
+    User[Data Analyst] -- "Streamlit UI" --> API[FastAPI Gateway]
+    API -- "RAG Query" --> Vec
+    API -- "SQL Query" --> SQL
+    
+    style Source stroke:#333,stroke-width:2px
+    style Airflow stroke:#333,stroke-width:2px
+    style Spark stroke:#333,stroke-width:2px,color:white
+    style SQL stroke:#333,stroke-width:2px,color:white
+    style Vec stroke:#333,stroke-width:2px,color:white
+```
+
+### Level 2: The "Dual-Stream" Pipeline
+How we keep Analytics (SQL) and AI (Vectors) in sync.
+
+```mermaid
+sequenceDiagram
+    participant A as Airflow
+    participant S as Spark
+    participant D as DB (Postgres)
+    participant V as Qdrant
+    
+    Note over A: 01:00 AM Daily Schedule
+    A->>S: Submit Job (Clean & Dedupe)
+    S-->>A: Job Success (Parquet Ready)
+    
+    par Analytics Stream
+        A->>D: Load Metadata (Authors, Dates)
+    and AI Stream
+        A->>A: Chunk Text (RecursiveSplitter)
+        A->>V: Batch Upsert Embeddings
+    end
+```
+
+---
+
+## 3. Architecture Decision Records (ADR)
+
+Strategic infrastructure choices for a scalable data platform.
+
+| Component | Decision | Alternatives Considered | Justification (The "Why") |
+| :--- | :--- | :--- | :--- |
+| **Compute Engine** | **Apache Spark** | Pandas / Dask | **Horizontal Scale:** Pandas is memory-bound to a single machine. Spark allows us to add worker nodes seamlessly as data grows from GBs to TBs without rewriting code. |
+| **Orchestration** | **Airflow** | Cron / Prefect | **Dependency Management:** We need complex DAGs (Directed Acyclic Graphs) where the Vector Store update *must not start* unless the Data Quality checks pass. Airflow handles these retry logics natively. |
+| **Infrastructure** | **Terraform** | Azure Portal (ClickOps) | **Reproducibility:** The entire database layer (Postgres Flexible Server) is defined as code. This allows us to spin up identical "Staging" and "Prod" environments in minutes. |
+
+---
+
+## 4. Cost & Scale Modeling (FinOps)
+
+**Scenario:** Ingesting 100GB of daily logs + 1M Vector Embeddings.
+
+| Resource | Unit Cost | Monthly Est. | Optimization Strategy |
+| :--- | :--- | :--- | :--- |
+| **Azure PostgreSQL** | B1ms Instance | ~$15.00 | Used "Burstable" tier for metadata storage since read load is low (mostly writes during ETL). |
+| **Compute (Spark)** | On-Prem / VM | $0.00* | Spark runs on existing Docker infrastructure. If moved to Databricks, costs would rise significantly. |
+| **Vector Storage** | Qdrant (Disk) | ~$5.00 | **Quantization:** Enabled binary quantization in Qdrant to reduce RAM usage by 4x with minimal accuracy loss. |
+
+---
+
+## 5. Reliability & Governance Strategy
+
+### Data Quality (Great Expectations)
+* **Schema Validation:** The Spark job enforces strict schema on ingestion. If a column is missing in the source CSV, the pipeline halts *before* polluting the data lake.
+* **Idempotency:** Airflow DAGs are designed to be re-runnable. If the job fails halfway, re-running it will **overwrite** the specific partition rather than duplicating data.
+
+### Hybrid Connectivity
+* **Terraform Output Injection:** The infrastructure deployment (`infra/main.tf`) automatically outputs the Database Connection String. This is injected into the Docker containers via environment variables, ensuring no hardcoded credentials exist in the repo.
+
+---
 
 ### Why this exists
 Building reliable data pipelines for AI is complex. Pipeline-X solves common engineering pitfalls by demonstrating a robust, unified architecture that scales from "Local Dev" to "Enterprise Cloud":
@@ -168,11 +275,4 @@ pipeline-x/
 ---
 
 ## Developer Spotlight
-
-**Nahasat Nibir** — Building intelligent, high‑performance developer tools and AI‑powered systems in Go and Python.
-
-- GitHub: https://github.com/Nibir1
-- LinkedIn: https://www.linkedin.com/in/nibir-1/
-- ArtStation: https://www.artstation.com/nibir
-
----
+Architected by **Nahasat Nibir** - *Senior Data Engineer & AI Platform Architect*
