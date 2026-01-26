@@ -23,7 +23,7 @@ up:
 
 # Stop containers
 down:
-	docker-compose down
+	docker-compose down --volumes --remove-orphans
 
 # Stop and Remove Volumes (Clean Start - Nuclear Option)
 # Use this if Qdrant or Postgres gets stuck/corrupted.

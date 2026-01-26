@@ -241,7 +241,7 @@ The application is built on a containerized microservices architecture managed b
     # 4. API & Frontend Configuration
     # ==========================================
     # URL used by Streamlit to talk to FastAPI (internal Docker network)
-    API_URL=http://localhost:8000/docs
+    API_URL=http://api:8000
     ```
 
 4.  **Build and Run**
