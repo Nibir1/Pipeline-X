@@ -1,6 +1,6 @@
-# Pipeline-X: Applied AI Data Platform
+# Pipeline-X: Enterprise Hybrid Cloud Data Platform
 
-> 🚀 **A Hybrid Cloud, Big Data-Ready ELT & RAG Pipeline connecting Raw Data with GenAI Orchestration.**
+> **A Production-Grade Hybrid Lakehouse connecting Big Data ETL with Generative AI.**
 
 [![Pipeline-X Demo](https://img.youtube.com/vi/1yQl7gMAKNU/maxresdefault.jpg)](https://youtu.be/1yQl7gMAKNU)
 
@@ -19,28 +19,30 @@
 ![Qdrant](https://img.shields.io/badge/Vector_DB-Qdrant-b91d47?style=for-the-badge&logo=qdrant&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![AI](https://img.shields.io/badge/AI-RAG%20%2B%20Vector%20Search-b91d47?style=for-the-badge)
 
-**Pipeline-X** is a reference architecture for building "Data Foundations for AI". It demonstrates the complete lifecycle of a modern data platform: orchestrating distributed data processing (Spark), managing hybrid cloud infrastructure (Terraform/Azure), and generating vector embeddings for AI Retrieval Augmented Generation (RAG).
-
----
-
-## 1. Executive Summary & Business Value
-
-Most AI projects fail because the underlying data infrastructure is brittle. Pipeline-X addresses the "Data Foundation" gap.
-
-| KPI | The Problem | Pipeline-X Solution |
-| :--- | :--- | :--- |
-| **Data Gravity** | Training data is stuck in silos (CSVs, SQL, APIs). | **Unified ELT:** Airflow orchestrates the ingestion from all sources into a central Data Lake. |
-| **Scalability** | Pandas scripts crash on datasets >10GB. | **Distributed Compute:** Automatically hands off heavy transformations to an **Apache Spark Cluster** (Master/Worker architecture). |
-| **Search Quality** | Standard keyword search misses context. | **Semantic Search:** A parallel pipeline chunks and embeds text into **Qdrant**, enabling "Meaning-based" retrieval for RAG apps. |
+**Pipeline-X** is a reference architecture for a **Modern Data Platform**. It demonstrates how to bridge the gap between traditional Data Engineering (ETL) and AI Engineering (RAG) using a **Hybrid Cloud** approach. It runs compute locally (Docker) while offloading durable storage to the cloud (Azure), ensuring scalability, cost-efficiency, and data resilience.
 
 ---
 
-## 2. System Architecture (C4 Model)
+## 1. Why This Exists (The Problem & Solution)
 
-We utilize a Hybrid Cloud architecture: Sensitive compute runs in containers (or on-prem), while durable storage lives in managed Azure Cloud services.
+Building reliable data pipelines for AI is complex. Most projects fail because the underlying data foundation is brittle. Pipeline-X solves common engineering pitfalls by demonstrating a robust, unified architecture that scales from "Local Dev" to "Enterprise Cloud":
 
-### Level 1: System Context
+| The Problem | Pipeline-X Solution |
+| :--- | :--- |
+| **Data Gravity** | Training data is stuck in silos (CSVs, SQL). | **Unified ELT:** Airflow orchestrates ingestion into a central Data Lake. |
+| **Scalability** | Pandas scripts crash on datasets >10GB. | **Distributed Compute:** Automatically hands off heavy transformations to an **Apache Spark Cluster**. |
+| **Contextual AI** | Standard search misses meaning. | **Dual-Stream Processing:** Splits data into structured metadata (SQL) and unstructured chunks (Vector Search) to keep Analytics and AI in sync. |
+| **Security** | Hardcoded credentials in code. | **Hybrid Connectivity:** Deploys Azure resources via Terraform and injects secrets directly into Docker containers at runtime. |
+
+---
+
+## 2. Architecture Overview
+
+Pipeline-X implements a **Polyglot Architecture**, utilizing the "Right Tool for the Job" strategy.
+
+### System Context (Hybrid Cloud)
 The Data Lifecycle: Ingest $\rightarrow$ Process $\rightarrow$ Serve.
 
 ```mermaid
@@ -67,10 +69,12 @@ graph LR
     style Spark stroke:#333,stroke-width:2px,color:white
     style SQL stroke:#333,stroke-width:2px,color:white
     style Vec stroke:#333,stroke-width:2px,color:white
+
 ```
 
-### Level 2: The "Dual-Stream" Pipeline
-How we keep Analytics (SQL) and AI (Vectors) in sync.
+### The "Dual-Stream" Logic
+
+How we orchestrate Analytics (SQL), Big Data (Spark), and AI (Vectors) in parallel.
 
 ```mermaid
 sequenceDiagram
@@ -80,8 +84,9 @@ sequenceDiagram
     participant V as Qdrant
     
     Note over A: 01:00 AM Daily Schedule
-    A->>S: Submit Job (Clean & Dedupe)
-    S-->>A: Job Success (Parquet Ready)
+    A->>S: Submit Job (Spark Transformation)
+    S-->>S: Self-Healing Check (Create Container?)
+    S-->>A: Job Success (Parquet Written to Azure)
     
     par Analytics Stream
         A->>D: Load Metadata (Authors, Dates)
@@ -89,6 +94,7 @@ sequenceDiagram
         A->>A: Chunk Text (RecursiveSplitter)
         A->>V: Batch Upsert Embeddings
     end
+
 ```
 
 ---
@@ -98,212 +104,174 @@ sequenceDiagram
 Strategic infrastructure choices for a scalable data platform.
 
 | Component | Decision | Alternatives Considered | Justification (The "Why") |
-| :--- | :--- | :--- | :--- |
+| --- | --- | --- | --- |
 | **Compute Engine** | **Apache Spark** | Pandas / Dask | **Horizontal Scale:** Pandas is memory-bound to a single machine. Spark allows us to add worker nodes seamlessly as data grows from GBs to TBs without rewriting code. |
-| **Orchestration** | **Airflow** | Cron / Prefect | **Dependency Management:** We need complex DAGs (Directed Acyclic Graphs) where the Vector Store update *must not start* unless the Data Quality checks pass. Airflow handles these retry logics natively. |
+| **Orchestration** | **Airflow** | Cron / Prefect | **Dependency Management:** We need complex DAGs where the Vector Store update *must not start* unless the Data Quality checks pass. Airflow handles these retry logics natively. |
 | **Infrastructure** | **Terraform** | Azure Portal (ClickOps) | **Reproducibility:** The entire database layer (Postgres Flexible Server) is defined as code. This allows us to spin up identical "Staging" and "Prod" environments in minutes. |
+| **Search Engine** | **Qdrant** | PGVector / Pinecone | **Performance:** Qdrant is written in Rust and optimized for high-throughput vector search. We use it locally to avoid vendor lock-in but it scales easily to cloud. |
 
 ---
 
-## 4. Cost & Scale Modeling (FinOps)
+## 4. Key Engineering Features
 
-**Scenario:** Ingesting 100GB of daily logs + 1M Vector Embeddings.
+### A. Hybrid Cloud Spark Engine (The "Big Data" Layer)
 
-| Resource | Unit Cost | Monthly Est. | Optimization Strategy |
-| :--- | :--- | :--- | :--- |
-| **Azure PostgreSQL** | B1ms Instance | ~$15.00 | Used "Burstable" tier for metadata storage since read load is low (mostly writes during ETL). |
-| **Compute (Spark)** | On-Prem / VM | $0.00* | Spark runs on existing Docker infrastructure. If moved to Databricks, costs would rise significantly. |
-| **Vector Storage** | Qdrant (Disk) | ~$5.00 | **Quantization:** Enabled binary quantization in Qdrant to reduce RAM usage by 4x with minimal accuracy loss. |
+Unlike simple Python scripts, Pipeline-X uses a dedicated **Apache Spark Cluster** (Master/Worker topology) running inside Docker to process heavy datasets.
 
----
+* **Self-Healing Infrastructure:** The Spark job (`spark_transformer.py`) implements **Infrastructure as Code (IaC)** logic. It checks for the existence of the target Azure Data Lake container (`processed-data`) and **automatically provisions it** via the Azure SDK if it's missing.
+* **Cloud-Native Storage:** Data is processed locally but written directly to **Azure Data Lake Storage (ADLS) Gen2** in Snappy-compressed Parquet format.
 
-## 5. Reliability & Governance Strategy
+### B. Reliability & Governance Strategy
 
-### Data Quality (Great Expectations)
 * **Schema Validation:** The Spark job enforces strict schema on ingestion. If a column is missing in the source CSV, the pipeline halts *before* polluting the data lake.
 * **Idempotency:** Airflow DAGs are designed to be re-runnable. If the job fails halfway, re-running it will **overwrite** the specific partition rather than duplicating data.
-
-### Hybrid Connectivity
-* **Terraform Output Injection:** The infrastructure deployment (`infra/main.tf`) automatically outputs the Database Connection String. This is injected into the Docker containers via environment variables, ensuring no hardcoded credentials exist in the repo.
+* **Decoupled Service Layer:** Exposes data via a **FastAPI** microservice, allowing frontend applications (Streamlit) to consume RAG capabilities without direct database access.
 
 ---
 
-### Why this exists
-Building reliable data pipelines for AI is complex. Pipeline-X solves common engineering pitfalls by demonstrating a robust, unified architecture that scales from "Local Dev" to "Enterprise Cloud":
+## 5. Tech Stack
 
-1.  **Hybrid Cloud Architecture:** Deploys storage resources to **Microsoft Azure** using **Terraform (IaC)**, connecting local microservices to managed cloud databases.
-2.  **Big Data Ready:** Features a dual-mode transformation layer. It uses **Pandas** for speed on small data and includes an integrated **Apache Spark Cluster** for distributed processing of massive datasets.
-3.  **Dual-Stream Processing:** Orchestrates a workflow that splits data into structured metadata (for SQL Warehousing) and unstructured chunks (for Vector Search), keeping Analytics and AI in sync.
-4.  **Decoupled Service Layer:** Exposes data via a **FastAPI** microservice, allowing frontend applications (Streamlit) to consume RAG capabilities without direct database access.
-
----
-
-## System Architecture
-
-The application is built on a containerized microservices architecture managed by Docker Compose, connected to Azure Cloud:
-
-1.  **Orchestrator (Apache Airflow):** The "Manager." It schedules DAGs, monitors dependencies, and triggers Spark jobs.
-2.  **Compute Engine:**
-    * **Local Executor:** Runs lightweight Python/Pandas tasks.
-    * **Apache Spark Cluster:** A Master/Worker setup for distributed ETL and Parquet file generation.
-3.  **Storage Layer (Hybrid):**
-    * **Azure Database for PostgreSQL:** Managed Cloud Database storing structured metadata (Author, Date, Category).
-    * **Qdrant (Local):** Stores high-dimensional vector embeddings for semantic search.
-4.  **Service Layer (FastAPI):** A lightweight REST API that handles embedding generation and vector similarity search.
-5.  **User Interface (Streamlit):** An interactive "Corporate Search" dashboard for natural language querying.
+| Layer | Technology | Role |
+| --- | --- | --- |
+| **Orchestration** | **Apache Airflow 2.9** | DAG Scheduling, Dependency Management, Retries. |
+| **Compute** | **Apache Spark 3.5** | Distributed processing of large-scale datasets. |
+| **Storage** | **Azure Data Lake Gen2** | Cloud "Landing Zone" for Parquet files. |
+| **Database** | **Azure PostgreSQL 15** | Relational storage for structured metadata. |
+| **Vector DB** | **Qdrant** | High-performance vector similarity search. |
+| **Frontend** | **Streamlit + FastAPI** | Interactive AI Chat Interface. |
+| **Infrastructure** | **Terraform** | IaC for Azure Resource Groups, Storage, and Networking. |
 
 ---
 
-## Tech Stack
-
-### Infrastructure & Cloud
--   **Cloud Provider:** Microsoft Azure (Sweden Central Region)
--   **IaC:** Terraform
--   **Database:** Azure Database for PostgreSQL (Flexible Server)
-
-### Orchestration & Big Data
--   **Manager:** Apache Airflow 2.9
--   **Distributed Compute:** Apache Spark 3.5.1 (PySpark)
--   **Local Transform:** Pandas 2.2
-
-### AI & Storage
--   **Vector DB:** Qdrant
--   **AI Framework:** LangChain (Chunking), Sentence-Transformers (Embeddings)
-
-### Interface & API
--   **Backend:** FastAPI, Uvicorn
--   **Frontend:** Streamlit
-
----
-
-## Getting Started
+## 6. Getting Started
 
 ### Prerequisites
 
--   Docker Desktop installed
--   Make (Optional, but recommended)
--   **Optional:** Azure CLI & Terraform (Only required if deploying infrastructure)
+* **Docker Desktop** (with at least 8GB RAM allocated)
+* **Azure Account** (Free Tier works)
+* **Terraform CLI** (Optional, for auto-provisioning)
 
-### Installation
+### Step 1: Provision Infrastructure (Hybrid Mode)
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/Nibir1/Pipeline-X.git
-    cd Pipeline-X
-    ```
+We use Terraform to spin up the Azure Data Lake and PostgreSQL database.
 
-2.  **Infrastructure Setup (Optional - Hybrid Mode)**
-    If you want to use Azure Cloud Storage, use the provided Terraform scripts:
-    ```bash
-    cd infra
-    terraform init
-    terraform apply
-    # Copy the 'db_host' output to your .env file
-    ```
-
-3.  **Set Environment Variables**
-    Create a `.env` file in the root directory. Update `POSTGRES_HOST` if using Azure, or keep it `postgres` for local testing.
-    ```bash
-    # ==========================================
-    # 1. System & Airflow Configuration
-    # ==========================================
-    # UID to prevent permission issues with Docker volumes (50000 is default for Airflow)
-    AIRFLOW_UID=50000
-    AIRFLOW_PROJ_DIR=./dags
-
-    # ==========================================
-    # 2. Database Configuration (PostgreSQL)
-    # ==========================================
-    # --- OPTION A: LOCAL DOCKER (Default) ---
-    # Use these settings for 'make build' and local interviews
-    POSTGRES_HOST=postgres
-    POSTGRES_USER=airflow
-    POSTGRES_PASSWORD=airflow
-    POSTGRES_DB=airflow
-    POSTGRES_PORT=5432
-
-    # --- OPTION B: AZURE HYBRID CLOUD ---
-    # Uncomment these and fill with values from 'terraform output' to use Cloud DB
-    # POSTGRES_HOST=pipeline-x-db-<insert-your-terraform-id>.postgres.database.azure.com
-    # POSTGRES_USER=airflow_admin
-    # POSTGRES_PASSWORD=SecurePassword123!
-    # POSTGRES_DB=airflow
-    # POSTGRES_PORT=5432
-
-    # ==========================================
-    # 3. Vector Database (Qdrant)
-    # ==========================================
-    # Hostname must match the service name in docker-compose.yml
-    QDRANT_HOST=qdrant
-    QDRANT_PORT=6333
-
-    # ==========================================
-    # 4. API & Frontend Configuration
-    # ==========================================
-    # URL used by Streamlit to talk to FastAPI (internal Docker network)
-    API_URL=http://api:8000
-    ```
-
-4.  **Build and Run**
-    ```bash
-    make build
-    ```
-
-The `make` command handles the sequential build process. Once complete:
--   **Frontend UI:** [http://localhost:8501](http://localhost:8501)
--   **Airflow UI:** [http://localhost:8080](http://localhost:8080)
--   **Spark Master UI:** [http://localhost:8081](http://localhost:8081)
-
-### Testing & Validation
-
-The project includes specific verification scripts for AI and Big Data.
-
-**1. Verify Semantic Search (RAG)**
 ```bash
-make shell
-python scripts/test_retrieval.py
+make infra-init
+make infra-up
+
 ```
 
-**2. Verify Spark Cluster (Big Data) Run the PySpark transformer to process raw data into Parquet format:**
-```bash
-make shell
-# Generate mock data first
-python gen_data.py
-# Submit job to Spark Cluster
-python src/etl/spark_transformer.py
+* *This will output your Azure connection details. You will need them for the next step.*
+
+### Step 2: Configuration (.env)
+
+Create a `.env` file in the root directory. This configures both Local Docker services and Cloud Connectivity.
+
+```ini
+# ==========================================
+# 1. System & Airflow Configuration
+# ==========================================
+AIRFLOW_UID=50000
+AIRFLOW_PROJ_DIR=./dags
+
+# ==========================================
+# 2. Database Configuration (PostgreSQL)
+# ==========================================
+# OPTION A: LOCAL DOCKER (Default)
+POSTGRES_HOST=postgres
+POSTGRES_USER=airflow
+POSTGRES_PASSWORD=airflow
+POSTGRES_DB=airflow
+POSTGRES_PORT=5432
+
+# OPTION B: AZURE HYBRID CLOUD (From Terraform Output)
+# POSTGRES_HOST=pipeline-x-db-<id>.postgres.database.azure.com
+# POSTGRES_USER=airflow_admin
+# POSTGRES_PASSWORD=SecurePassword123!
+
+# ==========================================
+# 3. Azure Data Lake (For Spark)
+# ==========================================
+# Required for 'Self-Healing' Spark jobs to write to Cloud
+AZURE_STORAGE_ACCOUNT_NAME=pipelinex<your_id>
+AZURE_STORAGE_ACCOUNT_KEY=<your_primary_key>
+
+# ==========================================
+# 4. Vector Database & API
+# ==========================================
+QDRANT_HOST=qdrant
+QDRANT_PORT=6333
+API_URL=http://api:8000
+
 ```
 
-## Project Structure
+### Step 3: Build & Launch
+
+We use a unified `Makefile` to handle the Docker build process and network setup.
+
+```bash
+make build
+
+```
+
+### Step 4: Run the Pipeline
+
+1. Access **Airflow** at `http://localhost:8080` (User: `admin`, Pass: `admin`).
+2. Trigger the `pipeline_x_ingestion` DAG.
+3. Watch the graph execute the 3 parallel streams (SQL, Spark, AI).
+
+### Step 5: Validate
+
+* **AI Interface:** Go to `http://localhost:8501` and ask: *"What is the financial outlook?"*
+* **Spark Cluster:** Check `http://localhost:8081` to see the completed application.
+* **Azure Portal:** Verify the `.parquet` files have landed in your Storage Account.
+
+---
+
+## 7. Project Structure
 
 ```text
 pipeline-x/
-├── docker-compose.yml        # Orchestration (Airflow, Spark, API, UI)
-├── Makefile                  # Build automation scripts
-├── infra/                    # Terraform Infrastructure as Code (Azure)
-│   ├── main.tf               # Cloud Resource Definitions
-│   └── .gitignore            # Excludes Terraform state/binaries
-├── dags/                     # Airflow DAGs
-│   ├── ingestion_pipeline.py # Main ELT + AI workflow
+├── Makefile                  # Command Center (Build, Deploy, Clean)
+├── docker-compose.yml        # Service Definitions (Airflow, Spark, Qdrant)
+├── infra/                    # Terraform (Azure Infrastructure)
+│   ├── main.tf               # Cloud Resources (Storage, Postgres)
+│   └── outputs.tf            # Connection String Outputs
+├── dags/                     # Airflow Orchestration
+│   ├── ingestion_pipeline.py # Main DAG
 │   └── utils/                # DB Connectors
-├── src/                      # Core Logic
-│   ├── etl/                  # Extractors & Transformers
-│   │   ├── extractor.py      # Data Generator
-│   │   └── spark_transformer.py # PySpark Logic
-│   ├── ai/                   # Chunking & Embedding logic
+├── src/                      # Application Logic
+│   ├── etl/
+│   │   ├── spark_transformer.py # Self-Healing Spark Job
+│   │   └── transformer.py       # Pandas Logic
+│   ├── ai/
+│   │   ├── embedder.py          # Vector Generation (Batch + Realtime)
+│   │   └── chunker.py           # Text Splitting
 │   ├── api/                  # FastAPI Backend
 │   └── ui/                   # Streamlit Frontend
-├── requirements.txt          # Python Dependencies
-└── Dockerfile                # Custom Airflow Image (includes OpenJDK)
+└── requirements.txt          # Python Dependencies
+
 ```
 
-## Roadmap
-- [x] Core Pipeline: End-to-End ELT with Airflow
-- [x] RAG Integration: Vector Search with Qdrant & LangChain
-- [x] Hybrid Cloud: Azure Database deployment via Terraform
-- [x] Big Data Engine: Apache Spark Integration
-- [ ] Kubernetes: Helm Chart deployment
+---
+
+## 8. FinOps & Cost Modeling
+
+**Scenario:** Processing 100GB Daily.
+
+| Resource | Strategy | Est. Cost |
+| --- | --- | --- |
+| **Compute** | **Hybrid Offloading:** We run Spark *locally* (or on cheap spot instances) and only pay for Cloud Storage. | **$0.00** (Compute) |
+| **Storage** | **Azure Blob (Hot):** Parquet compression reduces size by ~70% vs CSV. | **~$2.50/mo** |
+| **Database** | **Azure Postgres (Burstable):** B1ms tier is sufficient for metadata. | **~$15.00/mo** |
 
 ---
 
 ## Developer Spotlight
-Architected by **Nahasat Nibir** - *Senior Data Engineer & AI Platform Architect*
+
+**Nahasat Nibir**
+*Senior Data Engineer & Cloud Architect*
+
+> "Pipeline-X proves that you don't need Databricks to build a Data Lake. With the right architecture, you can build a robust, self-healing, and scalable platform using Open Source tools and smart Cloud integration."
+
+---
