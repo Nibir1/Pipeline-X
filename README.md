@@ -204,12 +204,43 @@ The application is built on a containerized microservices architecture managed b
 3.  **Set Environment Variables**
     Create a `.env` file in the root directory. Update `POSTGRES_HOST` if using Azure, or keep it `postgres` for local testing.
     ```bash
+    # ==========================================
+    # 1. System & Airflow Configuration
+    # ==========================================
+    # UID to prevent permission issues with Docker volumes (50000 is default for Airflow)
     AIRFLOW_UID=50000
-    POSTGRES_HOST=pipeline-x-db-xxxx.postgres.database.azure.com  # Or 'postgres' for local
-    POSTGRES_USER=airflow_admin
-    POSTGRES_PASSWORD=SecurePassword123!
+    AIRFLOW_PROJ_DIR=./dags
+
+    # ==========================================
+    # 2. Database Configuration (PostgreSQL)
+    # ==========================================
+    # --- OPTION A: LOCAL DOCKER (Default) ---
+    # Use these settings for 'make build' and local interviews
+    POSTGRES_HOST=postgres
+    POSTGRES_USER=airflow
+    POSTGRES_PASSWORD=airflow
     POSTGRES_DB=airflow
+    POSTGRES_PORT=5432
+
+    # --- OPTION B: AZURE HYBRID CLOUD ---
+    # Uncomment these and fill with values from 'terraform output' to use Cloud DB
+    # POSTGRES_HOST=pipeline-x-db-<insert-your-terraform-id>.postgres.database.azure.com
+    # POSTGRES_USER=airflow_admin
+    # POSTGRES_PASSWORD=SecurePassword123!
+    # POSTGRES_DB=airflow
+    # POSTGRES_PORT=5432
+
+    # ==========================================
+    # 3. Vector Database (Qdrant)
+    # ==========================================
+    # Hostname must match the service name in docker-compose.yml
     QDRANT_HOST=qdrant
+    QDRANT_PORT=6333
+
+    # ==========================================
+    # 4. API & Frontend Configuration
+    # ==========================================
+    # URL used by Streamlit to talk to FastAPI (internal Docker network)
     API_URL=http://localhost:8000/docs
     ```
 

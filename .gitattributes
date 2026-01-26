@@ -1,0 +1,52 @@
+# =======================================================
+# 1. Enforce Unix Line Endings (LF) for Code & Configs
+# =======================================================
+# This ensures Docker and Linux containers can read scripts
+# regardless of whether they were edited on Windows or Mac.
+
+*.py        text eol=lf
+*.sh        text eol=lf
+*.js        text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.csv       text eol=lf
+*.html      text eol=lf
+*.css       text eol=lf
+*.sql       text eol=lf
+*.env       text eol=lf
+*.tf        text eol=lf
+*.hcl       text eol=lf
+
+# Build & Config Files
+Dockerfile  text eol=lf
+Makefile    text eol=lf
+docker-compose.yml text eol=lf
+requirements.txt   text eol=lf
+.gitignore  text eol=lf
+
+# =======================================================
+# 2. Binary Files (Do Not Modify)
+# =======================================================
+# Git should never try to change line endings for these.
+
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.parquet   binary
+*.pyc       binary
+*.jar       binary
+*.exe       binary
+
+# Terraform State (often contains binary data or sensitive formatting)
+*.tfstate   binary
+*.tfplan    binary
+
+# =======================================================
+# 3. Default Behavior
+# =======================================================
+# For everything else, let Git decide (Auto)
+* text=auto

@@ -60,27 +60,18 @@ services:
       - qdrant-storage:/qdrant/storage
 
   # ---------------------------------------------------------
-  # 3. AIRFLOW INITIALIZATION
+  # 3. AIRFLOW INITIALIZATION (FIXED for Mac/Windows compatibility)
   # ---------------------------------------------------------
   airflow-init:
     <<: *airflow-common
+    container_name: pipeline-x-airflow-init
     entrypoint: /bin/bash
+    # Single-line command to avoid CRLF/newline issues across OS
+    command: >
+      -c "airflow db init && airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin"
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_UPGRADE: 'true'
-      _AIRFLOW_WWW_USER_CREATE: 'true'
-      _AIRFLOW_WWW_USER_USERNAME: 'admin'
-      _AIRFLOW_WWW_USER_PASSWORD: 'admin'
-    command: -c "
-      airflow db init &&
-      airflow users create
-        --username admin
-        --password admin
-        --firstname Pipeline
-        --lastname X
-        --role Admin
-        --email admin@pipelinex.com
-      "
 
   # ---------------------------------------------------------
   # 4. AIRFLOW SERVICES
@@ -148,8 +139,8 @@ services:
       /opt/spark/bin/spark-class
       org.apache.spark.deploy.master.Master
     ports:
-    - "8081:8080"
-    - "7077:7077"
+      - "8081:8080"
+      - "7077:7077"
 
   spark-worker:
     image: apache/spark:3.5.1
