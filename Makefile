@@ -40,7 +40,13 @@ build:
 # Standard Up (Assumes image exists)
 up:
 	docker-compose up -d
-	@echo "Pipeline X started."
+	@echo "------------------------------------------------"
+	@echo "Pipeline X is live!"
+	@echo "   - UI:       http://localhost:8501"
+	@echo "   - Spark:    http://localhost:8081"
+	@echo "   - Airflow:  http://localhost:8080/login/"
+	@echo "   - API:      http://localhost:8000/docs"
+	@echo "------------------------------------------------"
 
 # Stop containers
 down:
