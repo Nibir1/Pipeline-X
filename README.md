@@ -2,9 +2,9 @@
 
 > **A Production-Grade Hybrid Lakehouse connecting Big Data ETL with Generative AI.**
 
-[![Pipeline-X Demo](https://img.youtube.com/vi/1yQl7gMAKNU/maxresdefault.jpg)](https://youtu.be/1yQl7gMAKNU)
+[![Pipeline-X Demo](https://img.youtube.com/vi/r3Bqqmt7yVU/maxresdefault.jpg)](https://youtu.be/r3Bqqmt7yVU)
 
-> 📺 **[Watch the Platform Demo](https://youtu.be/1yQl7gMAKNU)** featuring Apache Spark distributed processing, Airflow orchestration, and Azure Hybrid Cloud deployment.
+> 📺 **[Watch the Platform Demo](https://youtu.be/r3Bqqmt7yVU)** featuring Apache Spark distributed processing, Airflow orchestration, and Azure Hybrid Cloud deployment.
 
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge)
 ![Cloud](https://img.shields.io/badge/Cloud-Azure%20Hybrid-0078D4?style=for-the-badge)
